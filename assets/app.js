@@ -476,6 +476,27 @@
     if (saved && saved.src) loadTrack({ src: saved.src, title: saved.title, page: saved.page }, !!saved.playing, saved.t || 0);
   } catch (e) {}
 
+  // document files live on files.gyoripeter.hu, where the download attribute is ignored (other origin):
+  // fetch the file and save it under its original name; on failure just open it
+  document.addEventListener('click', async e => {
+    const a = e.target.closest('a[download]');
+    if (!a || a.origin === location.origin || e.metaKey || e.ctrlKey || e.shiftKey || a.getAttribute('aria-busy')) return;
+    e.preventDefault();
+    a.setAttribute('aria-busy', 'true');
+    try {
+      const r = await fetch(a.href);
+      if (!r.ok) throw new Error(r.status);
+      const url = URL.createObjectURL(await r.blob());
+      const tmp = Object.assign(document.createElement('a'), { href: url, download: a.getAttribute('download') || '' });
+      document.body.append(tmp); tmp.click(); tmp.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+    } catch (err) {
+      window.open(a.href, '_blank', 'noopener');
+    } finally {
+      a.removeAttribute('aria-busy');
+    }
+  });
+
   // YouTube facades
   $$('.video[data-yt]').forEach(v => {
     const play = () => {

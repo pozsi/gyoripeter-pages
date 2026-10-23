@@ -567,3 +567,6 @@ a[data-audio].audio-current { background: var(--accent-soft); border-radius: 4px
 .prose .fn-note { font-size: .88em; line-height: 1.55; color: var(--ink-2); margin: .35em 0; padding-left: 2.4em; text-indent: -2.4em; }   /* hanging indent */
 .prose .fn-back { display: inline-block; width: 2.4em; padding-right: .5em; box-sizing: border-box; text-align: right; text-indent: 0; text-decoration: none; font-weight: 700; font-variant-numeric: tabular-nums; }
 .prose .fn-note:target, .prose sup.fn-ref a:target { background: var(--accent-soft); border-radius: 4px; box-shadow: 0 0 0 4px var(--accent-soft); transition: background 1.5s; }
+
+/* download in progress (files fetched from files.gyoripeter.hu) */
+a[aria-busy] { opacity: .6; cursor: progress; }
