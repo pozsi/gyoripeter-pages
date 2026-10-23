@@ -82,8 +82,8 @@
     stack.className = 'pdf-stack';
     wrap.append(stack);
     try {
-      const pdfjs = await import('/gyoripeter-pages/assets/pdfjs/pdf.min.mjs');
-      pdfjs.GlobalWorkerOptions.workerSrc = '/gyoripeter-pages/assets/pdfjs/pdf.worker.min.mjs';
+      const pdfjs = await import('/assets/pdfjs/pdf.min.mjs');
+      pdfjs.GlobalWorkerOptions.workerSrc = '/assets/pdfjs/pdf.worker.min.mjs';
       const pdf = await pdfjs.getDocument(el.dataset.pdf).promise;
       const N = pdf.numPages;
       const first = await pdf.getPage(1);
@@ -524,7 +524,7 @@
   const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const load = async () => {
     if (index) return index;
-    const r = await fetch('/gyoripeter-pages/assets/search.json');
+    const r = await fetch('/assets/search.json');
     index = (await r.json()).map(p => ({ ...p, nt: norm(p.t), nx: norm(p.x), nc: norm(p.c || '') }));
     return index;
   };
