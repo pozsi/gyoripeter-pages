@@ -570,3 +570,6 @@ a[data-audio].audio-current { background: var(--accent-soft); border-radius: 4px
 
 /* download in progress (files fetched from files.gyoripeter.hu) */
 a[aria-busy] { opacity: .6; cursor: progress; }
+
+.doc-image { margin: 0; }
+.doc-image img { display: block; max-width: 100%; height: auto; margin: 0 auto; border-radius: var(--radius, 8px); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
