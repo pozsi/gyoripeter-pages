@@ -445,6 +445,8 @@ ul.footer-contact { list-style: none; margin: 0; padding: 0; display: grid; gap:
 .folder-item.is-folder .folder-icon { color: var(--accent); }
 .folder-name { color: var(--ink); text-decoration: none; overflow-wrap: anywhere; }
 .folder-item.is-folder .folder-name { font-weight: 600; }
+.folder-up .folder-name { grid-column: 2 / -1; color: var(--ink-2); }
+.folder-up .folder-name span { font-weight: 600; color: var(--ink); }
 .folder-name:hover { color: var(--link); text-decoration: underline; text-underline-offset: .18em; }
 .folder-name .ext { color: var(--ink-3); font-size: .85em; }
 .folder-type, .folder-size { color: var(--ink-3); font-size: 13.5px; white-space: nowrap; }
