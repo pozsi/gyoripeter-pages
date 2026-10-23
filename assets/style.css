@@ -436,6 +436,23 @@ ul.footer-contact { list-style: none; margin: 0; padding: 0; display: grid; gap:
 .doc-original span { color: var(--link); text-decoration: underline; text-underline-offset: .18em; overflow-wrap: anywhere; }
 .doc-original:hover span { text-decoration-thickness: 2px; }
 
+/* ---------- folder pages */
+.folder-list { list-style: none; margin: 0 auto; padding: 0; max-width: 72ch; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.folder-item { display: grid; grid-template-columns: 20px 1fr auto; align-items: baseline; gap: 4px 12px; padding: 11px 16px; }
+.folder-item + .folder-item { border-top: 1px solid var(--line); }
+.folder-icon { width: 20px; height: 20px; align-self: start; margin-top: 1px; color: var(--ink-3); }
+.folder-item.is-folder .folder-icon { color: var(--accent); }
+.folder-name { color: var(--ink); text-decoration: none; overflow-wrap: anywhere; }
+.folder-item.is-folder .folder-name { font-weight: 600; }
+.folder-name:hover { color: var(--link); text-decoration: underline; text-underline-offset: .18em; }
+.folder-name .ext { color: var(--ink-3); font-size: .85em; }
+.folder-meta { color: var(--ink-3); font-size: 13.5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.folder-note { max-width: 72ch; margin: 12px auto 0; color: var(--ink-3); font-size: 13.5px; }
+@media (max-width: 640px) {
+  .folder-item { grid-template-columns: 20px 1fr; }
+  .folder-meta { grid-column: 2; white-space: normal; }
+}
+
 /* ---------- audio player */
 .audio-player { display: flex; align-items: center; gap: 18px; max-width: 720px; margin: 8px auto 0; padding: 18px 22px; border: 1px solid var(--line); border-radius: 20px; background: var(--surface); box-shadow: var(--shadow); }
 .ap-play { flex-shrink: 0; width: 60px; height: 60px; border-radius: 50%; border: 0; background: var(--accent); color: var(--on-accent); cursor: pointer; display: grid; place-items: center; transition: transform .15s; }
