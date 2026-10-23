@@ -392,6 +392,7 @@
   const audio = $('audio', bar), seek = $('.pb-seek', bar), cur = $('.pb-cur', bar), dur = $('.pb-dur', bar);
   const playBtn = $('.pb-play', bar), rateBtn = $('.pb-rate', bar), titleEl = $('.pb-title', bar);
   let current = null;           // {src, title, page}
+  let leaving = false;          // set on pagehide: the browser's own pause while unloading must not be saved
   const markLinks = () => $$('[data-audio]').forEach(l => {
     const on = current && l.dataset.audio === current.src;
     l.classList.toggle('audio-current', !!on);
@@ -399,7 +400,7 @@
   });
   const save = () => {
     try {
-      if (current) sessionStorage.setItem('player', JSON.stringify({ ...current, t: audio.currentTime }));
+      if (current) sessionStorage.setItem('player', JSON.stringify({ ...current, t: audio.currentTime, playing: !audio.paused }));
       else sessionStorage.removeItem('player');
     } catch (e) {}
   };
@@ -432,7 +433,7 @@
   playBtn.addEventListener('click', () => (audio.paused ? audio.play() : audio.pause()));
   $('.pb-close', bar).addEventListener('click', close);
   audio.addEventListener('play', () => { bar.classList.add('playing'); playBtn.setAttribute('aria-label', 'Szünet'); markLinks(); });
-  audio.addEventListener('pause', () => { bar.classList.remove('playing'); playBtn.setAttribute('aria-label', 'Lejátszás'); markLinks(); save(); });
+  audio.addEventListener('pause', () => { bar.classList.remove('playing'); playBtn.setAttribute('aria-label', 'Lejátszás'); markLinks(); if (!leaving) save(); });
   audio.addEventListener('loadedmetadata', () => { dur.textContent = fmt(audio.duration); });
   audio.addEventListener('timeupdate', () => {
     cur.textContent = fmt(audio.currentTime);
@@ -448,7 +449,8 @@
     audio.playbackRate = r;
     rateBtn.textContent = String(r).replace('.', ',') + '×';
   });
-  addEventListener('pagehide', save);
+  addEventListener('pagehide', () => { save(); leaving = true; });
+  addEventListener('pageshow', () => { leaving = false; });
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && current && !document.querySelector('dialog[open]')) close();
   });
@@ -467,10 +469,11 @@
     loadTrack({ src: el.dataset.audio, title: label || el.dataset.audioTitle, page });
   });
 
-  // keep the recording across page loads (restored paused, at the same position)
+  // keep the recording across page loads, at the same position; if it was playing, carry on (where the
+  // browser's autoplay rules allow it — otherwise it stays paused and one tap resumes)
   try {
     const saved = JSON.parse(sessionStorage.getItem('player') || 'null');
-    if (saved && saved.src) loadTrack({ src: saved.src, title: saved.title, page: saved.page }, false, saved.t || 0);
+    if (saved && saved.src) loadTrack({ src: saved.src, title: saved.title, page: saved.page }, !!saved.playing, saved.t || 0);
   } catch (e) {}
 
   // YouTube facades
