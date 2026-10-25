@@ -393,10 +393,18 @@
   const playBtn = $('.pb-play', bar), rateBtn = $('.pb-rate', bar), titleEl = $('.pb-title', bar);
   let current = null;           // {src, title, page}
   let leaving = false;          // set on pagehide: the browser's own pause while unloading must not be saved
+  // the open recording's links; on folder pages its row too (is-open, is-playing: style.css draws the icon)
+  const markRow = (l, on, playing) => {
+    const row = l.closest('.folder-item');
+    if (!row) return;
+    row.classList.toggle('is-open', on);
+    row.classList.toggle('is-playing', playing);
+  };
   const markLinks = () => $$('[data-audio]').forEach(l => {
-    const on = current && l.dataset.audio === current.src;
-    l.classList.toggle('audio-current', !!on);
-    l.classList.toggle('audio-playing', !!on && !audio.paused);
+    const on = !!current && l.dataset.audio === current.src;
+    l.classList.toggle('audio-current', on);
+    l.classList.toggle('audio-playing', on && !audio.paused);
+    markRow(l, on, on && !audio.paused);
   });
   const save = () => {
     try {
@@ -404,9 +412,11 @@
       else sessionStorage.removeItem('player');
     } catch (e) {}
   };
+  let onBarChange = () => {};   // the video box moves up while the bar is open
   const showBar = on => {
     bar.hidden = !on;
     document.body.classList.toggle('has-player', on);
+    onBarChange();
   };
   const loadTrack = (item, play = true, at = 0) => {
     if (!current || current.src !== item.src) {
@@ -452,7 +462,7 @@
   addEventListener('pagehide', () => { save(); leaving = true; });
   addEventListener('pageshow', () => { leaving = false; });
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && current && !document.querySelector('dialog[open]')) close();
+    if (e.key === 'Escape' && current && !document.querySelector('dialog[open]') && !document.body.classList.contains('video-big')) close();
   });
 
   // any element with data-audio (links on content pages, the big button on a recording's page) feeds the bar
@@ -471,10 +481,210 @@
 
   // keep the recording across page loads, at the same position; if it was playing, carry on (where the
   // browser's autoplay rules allow it — otherwise it stays paused and one tap resumes)
-  try {
-    const saved = JSON.parse(sessionStorage.getItem('player') || 'null');
-    if (saved && saved.src) loadTrack({ src: saved.src, title: saved.title, page: saved.page }, !!saved.playing, saved.t || 0);
-  } catch (e) {}
+  const savedState = key => { try { return JSON.parse(sessionStorage.getItem(key) || 'null'); } catch (e) { return null; } };
+  const restoreAudio = () => {
+    const saved = savedState('player');
+    if (!saved || !saved.src) { if (current) close(); return; }
+    if (current && current.src === saved.src) {
+      if (Math.abs(audio.currentTime - (saved.t || 0)) > 1) audio.currentTime = saved.t || 0;
+      if (saved.playing) audio.play().catch(() => {}); else if (!audio.paused) audio.pause();
+      return;
+    }
+    loadTrack({ src: saved.src, title: saved.title, page: saved.page }, !!saved.playing, saved.t || 0);
+  };
+  restoreAudio();
+  // back / forward can bring a page back from the browser's page cache as it was left, player and all:
+  // catch up with what happened on the other pages (closed there, another recording, a later position)
+  addEventListener('pageshow', e => { if (e.persisted) restoreAudio(); });
+
+  // video: a floating box with a YouTube player, opened by links to Drive videos that have a YouTube copy
+  // (data-yt, from videos/manifest.tsv). Like the audio bar it follows the reader: video, title, page, time,
+  // playing and size are kept in sessionStorage and restored on the next page (it comes back paused where
+  // the browser blocks autoplay). The inline .video[data-yt] tiles are separate (see "YouTube facades").
+  const vbox = document.createElement('div');
+  vbox.className = 'video-box';
+  vbox.hidden = true;
+  vbox.setAttribute('role', 'region');
+  vbox.setAttribute('aria-label', 'Videólejátszó');
+  const vIcon = (d, cls = '') => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true"><path d="${d}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  vbox.innerHTML = `
+    <div class="vb-head">
+      <a class="vb-title" href="#"></a>
+      <button type="button" class="vb-btn vb-min" aria-label="Összecsukás" title="Összecsukás">${vIcon('M5 12h14')}</button>
+      <button type="button" class="vb-btn vb-restore" aria-label="Visszaállítás" title="Visszaállítás">${vIcon('M6 15l6-6 6 6')}</button>
+      <button type="button" class="vb-btn vb-big" aria-label="Nagyítás" title="Nagyítás">${vIcon('M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5', 'vb-i-grow')}${vIcon('M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5', 'vb-i-shrink')}</button>
+      <button type="button" class="vb-btn vb-yt" aria-label="Megnyitás a YouTube-on" title="Megnyitás a YouTube-on">${vIcon('M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5')}</button>
+      <button type="button" class="vb-btn vb-close" aria-label="Videó bezárása" title="Bezárás">${vIcon('M6 6l12 12M18 6 6 18')}</button>
+    </div>
+    <div class="vb-body"><div class="vb-frame"></div></div>`;
+  document.body.append(vbox);
+  const vTitle = $('.vb-title', vbox), vFrame = $('.vb-frame', vbox), bigBtn = $('.vb-big', vbox);
+  let vcur = null;              // {id, title, page}
+  let vsize = 'normal';         // 'normal' | 'min' | 'big'
+  let yt = null, ytReady = false, vplaying = false, vstart = 0, vleaving = false;
+  const vtime = () => {         // not started yet (or restored and paused): the start time
+    if (!yt || !ytReady) return vstart;
+    const t = yt.getCurrentTime() || 0;
+    return yt.getPlayerState() === YT.PlayerState.CUED ? vstart : t || vstart;
+  };
+  const vsave = () => {
+    try {
+      if (vcur) sessionStorage.setItem('video', JSON.stringify({ ...vcur, t: vtime(), playing: vplaying, size: vsize }));
+      else sessionStorage.removeItem('video');
+    } catch (e) {}
+  };
+  const markVideoLinks = () => $$('a[data-yt], button[data-yt]').forEach(l => {
+    const on = !!vcur && l.dataset.yt === vcur.id;
+    l.classList.toggle('video-current', on);
+    l.classList.toggle('video-playing', on && vplaying);
+    markRow(l, on, on && vplaying);
+  });
+  // above the audio bar when that is open; enlarged = the width of the PDF viewer on document pages (the
+  // page width, --wrap less its 24px sides), the same on every page, as far as the screen height allows
+  const place = () => {
+    const below = bar.hidden ? 0 : bar.offsetHeight;
+    vbox.style.setProperty('--vb-bottom', below + 'px');
+    if (vsize === 'big') {
+      const wrap = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--wrap')) || 1200;
+      const head = $('.vb-head', vbox).offsetHeight;
+      const w = Math.min(wrap - 48, innerWidth - 48, (innerHeight - below - head - 32) * 16 / 9);
+      vbox.style.setProperty('--vb-w', Math.round(w) + 'px');
+    }
+  };
+  onBarChange = place;
+  addEventListener('resize', place);
+  const setSize = s => {
+    vsize = s;
+    vbox.classList.toggle('vb-is-min', s === 'min');
+    vbox.classList.toggle('vb-is-big', s === 'big');
+    document.body.classList.toggle('video-big', s === 'big');
+    const label = s === 'big' ? 'Eredeti méret' : 'Nagyítás';
+    bigBtn.setAttribute('aria-label', label);
+    bigBtn.title = label;
+    place();
+    vsave();
+  };
+  let ytApi = null;
+  const loadYtApi = () => ytApi || (ytApi = new Promise(resolve => {
+    if (window.YT && YT.Player) return resolve();
+    const prev = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => { if (prev) prev(); resolve(); };
+    document.head.append(Object.assign(document.createElement('script'), { src: 'https://www.youtube.com/iframe_api' }));
+  }));
+  let afterPause = null;         // the "open on YouTube" button waits for the pause (see there)
+  const onState = e => {
+    if (e.data === YT.PlayerState.PAUSED && afterPause) afterPause();
+    if (e.data === YT.PlayerState.PLAYING) {
+      vplaying = true;
+      if (!audio.paused) audio.pause();
+    } else if (e.data === YT.PlayerState.PAUSED || e.data === YT.PlayerState.ENDED || e.data === YT.PlayerState.CUED) {
+      vplaying = false;
+    }
+    markVideoLinks();
+    if (!vleaving) vsave();
+  };
+  // fresh: a new player even if one is ready (stopping by replacing the player does not depend on the
+  // embed obeying a pause command)
+  const openVideo = (item, { play = true, at = 0, size = 'normal', fresh = false } = {}) => {
+    vcur = item;
+    vstart = at;
+    vplaying = false;
+    vTitle.textContent = item.title;
+    vTitle.title = item.title;
+    vTitle.href = item.page || '#';
+    vbox.hidden = false;
+    document.body.classList.add('has-video');
+    setSize(size);
+    markVideoLinks();
+    loadYtApi().then(() => {
+      if (!vcur || vcur.id !== item.id) return;
+      if (yt && ytReady && !fresh) {
+        yt[play ? 'loadVideoById' : 'cueVideoById']({ videoId: item.id, startSeconds: at });
+        return;
+      }
+      if (yt) yt.destroy();
+      const el = document.createElement('div');
+      vFrame.replaceChildren(el);
+      ytReady = false;
+      yt = new YT.Player(el, {
+        host: 'https://www.youtube-nocookie.com',
+        videoId: item.id,
+        playerVars: { autoplay: play ? 1 : 0, start: Math.floor(at), rel: 0, playsinline: 1, enablejsapi: 1, origin: location.origin },
+        events: { onReady: () => { ytReady = true; if (play) yt.playVideo(); }, onStateChange: onState },
+      });
+    });
+  };
+  const closeVideo = () => {
+    if (yt) { try { yt.destroy(); } catch (e) {} }
+    yt = null; ytReady = false; vcur = null; vplaying = false;
+    vFrame.replaceChildren();
+    vbox.hidden = true;
+    document.body.classList.remove('has-video');
+    setSize('normal');            // also saves: the stored video is removed
+    markVideoLinks();
+  };
+  $('.vb-min', vbox).addEventListener('click', () => setSize('min'));
+  $('.vb-restore', vbox).addEventListener('click', () => setSize('normal'));
+  bigBtn.addEventListener('click', () => setSize(vsize === 'big' ? 'normal' : 'big'));
+  $('.vb-close', vbox).addEventListener('click', closeVideo);
+  // pause first, open the tab once the player reports the pause: a pause sent as the new tab comes to the
+  // front is not carried out while this page is in the background (the audio bar's pause, sent while the
+  // page is visible, works). No confirmation within 0.6 s: open anyway and swap in a paused player at the
+  // same time, which stops it for certain. (Opening the tab that soon after the click is still allowed.)
+  $('.vb-yt', vbox).addEventListener('click', () => {
+    if (!vcur) return;
+    const t = Math.floor(vtime());
+    const open = () => window.open(`https://www.youtube.com/watch?v=${vcur.id}&t=${t}s`, '_blank', 'noopener');
+    if (!vplaying || !yt || !ytReady) { open(); return; }
+    let done = false;
+    const go = stopped => {
+      if (done) return;
+      done = true;
+      afterPause = null;
+      open();
+      if (!stopped) openVideo(vcur, { play: false, at: t, size: vsize, fresh: true });
+    };
+    afterPause = () => go(true);
+    yt.pauseVideo();
+    setTimeout(() => go(false), 600);
+  });
+  // the title leads back to the page the video was opened on; on that page, to its link
+  vTitle.addEventListener('click', e => {
+    if (!vcur || vcur.page !== location.pathname) return;
+    e.preventDefault();
+    const l = $('.video-current');
+    if (l) l.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  });
+  audio.addEventListener('play', () => { if (vplaying && yt && ytReady) yt.pauseVideo(); });
+  setInterval(() => { if (vplaying) vsave(); }, 2000);
+  addEventListener('pagehide', () => { vsave(); vleaving = true; });
+  addEventListener('pageshow', () => { vleaving = false; });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && vsize === 'big' && !document.querySelector('dialog[open]')) setSize('normal');
+  });
+  document.addEventListener('click', e => {
+    const el = e.target.closest('a[data-yt], button[data-yt]');
+    if (!el || e.metaKey || e.ctrlKey || e.shiftKey) return;
+    e.preventDefault();
+    if (vcur && vcur.id === el.dataset.yt) {
+      if (vsize === 'min') setSize('normal');
+      if (yt && ytReady) vplaying ? yt.pauseVideo() : yt.playVideo();
+      return;
+    }
+    const text = el.tagName === 'A' ? el.textContent.trim() : '';
+    openVideo({ id: el.dataset.yt, title: text || el.dataset.ytTitle || 'Videó', page: location.pathname },
+              { size: vsize === 'big' ? 'big' : 'normal' });
+  });
+  // on a new page an enlarged box comes back at its corner size (a minimized one stays minimized)
+  // (also when back / forward brings the page back from the browser's page cache, see restoreAudio)
+  const restoreVideo = () => {
+    const saved = savedState('video');
+    if (!saved || !saved.id) { if (vcur) closeVideo(); return; }
+    openVideo({ id: saved.id, title: saved.title, page: saved.page },
+              { play: !!saved.playing, at: saved.t || 0, size: saved.size === 'min' ? 'min' : 'normal' });
+  };
+  restoreVideo();
+  addEventListener('pageshow', e => { if (e.persisted) restoreVideo(); });
 
   // document files live on files.gyoripeter.hu, where the download attribute is ignored (other origin):
   // fetch the file and save it under its original name; on failure just open it
@@ -520,9 +730,50 @@
     $('#viewer-title').textContent = title || '';
     $('#viewer-open').href = openUrl;
     vBody.replaceChildren(node);
-    viewer.showModal();
+    if (!viewer.open) viewer.showModal();
   };
-  viewer.addEventListener('close', () => vBody.replaceChildren());
+  // image galleries: the viewer pages through the images of the same folder listing (folder pages) or of
+  // the page (pictures on content pages) — buttons, arrow keys, swipe; it stops at both ends
+  const prevBtn = $('.viewer-prev'), nextBtn = $('.viewer-next'), countEl = $('#viewer-count');
+  let gallery = [], gIndex = 0;
+  const lbSrc = a => a.dataset.lightbox || a.href;
+  const lbFull = src => src.replace(/=w\d+$/, '=w2400');
+  const lbTitle = a => a.dataset.lightboxTitle || a.closest('figure')?.querySelector('figcaption')?.textContent.trim() || '';
+  const showImage = i => {
+    gIndex = i;
+    const a = gallery[i], img = new Image();
+    img.src = lbFull(lbSrc(a));
+    img.alt = lbTitle(a);
+    openViewer(lbTitle(a), lbSrc(a), img);
+    const many = gallery.length > 1;
+    prevBtn.hidden = nextBtn.hidden = countEl.hidden = !many;
+    prevBtn.disabled = i === 0;
+    nextBtn.disabled = i === gallery.length - 1;
+    countEl.textContent = `${i + 1} / ${gallery.length}`;
+    [i - 1, i + 1].forEach(j => { if (gallery[j]) new Image().src = lbFull(lbSrc(gallery[j])); });   // preload
+  };
+  const step = d => { if (gallery[gIndex + d]) showImage(gIndex + d); };
+  prevBtn.addEventListener('click', () => step(-1));
+  nextBtn.addEventListener('click', () => step(1));
+  document.addEventListener('keydown', e => {
+    if (!viewer.open || gallery.length < 2 || e.altKey || e.metaKey || e.ctrlKey) return;
+    if (e.key === 'ArrowLeft') { e.preventDefault(); step(-1); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); step(1); }
+  });
+  let swipe = null;
+  const stage = $('.viewer-stage');   // the buttons too: a swipe may start on one
+  stage.addEventListener('touchstart', e => { swipe = e.touches.length === 1 ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null; }, { passive: true });
+  stage.addEventListener('touchend', e => {
+    if (!swipe || gallery.length < 2) return;
+    const dx = e.changedTouches[0].clientX - swipe.x, dy = e.changedTouches[0].clientY - swipe.y;
+    swipe = null;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) step(dx < 0 ? 1 : -1);
+  });
+  viewer.addEventListener('close', () => {
+    vBody.replaceChildren();
+    gallery = [];
+    prevBtn.hidden = nextBtn.hidden = countEl.hidden = true;
+  });
   viewer.addEventListener('click', e => { if (e.target === viewer) viewer.close(); });
   $$('[data-viewer-close]').forEach(b => b.addEventListener('click', () => viewer.close()));
   $$('[data-preview]').forEach(b => b.addEventListener('click', () => {
@@ -533,12 +784,13 @@
     f.title = b.dataset.title || 'Dokumentum előnézet';
     openViewer(b.dataset.title, b.dataset.open, f);
   }));
+  // pictures on pages link straight to the image (data-lightbox empty); image files on folder pages link to
+  // their document page and carry the image's address and name (data-lightbox, data-lightbox-title)
   $$('a[data-lightbox]').forEach(a => a.addEventListener('click', e => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey) return;
     e.preventDefault();
-    const img = new Image();
-    img.src = a.href.replace(/=w\d+$/, '=w2400');
-    img.alt = '';
-    openViewer('', a.href, img);
+    gallery = $$('a[data-lightbox]', a.closest('.folder-list') || a.closest('main') || document);
+    showImage(gallery.indexOf(a));
   }));
 
   // search

@@ -10,7 +10,7 @@
 <link rel="preload" href="/assets/fonts/inter-normal-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/assets/fonts/fonts.css">
 <link rel="stylesheet" href="/assets/schemes.css?v=1cdb095d98">
-<link rel="stylesheet" href="/assets/style.css?v=2b6e5d6f8b">
+<link rel="stylesheet" href="/assets/style.css?v=ddf09aac11">
 <script>try{var d=document.documentElement,t=localStorage.getItem("theme"),c=localStorage.getItem("scheme");if(t)d.dataset.theme=t;if(c)d.dataset.scheme=c}catch(e){}</script>
 </head>
 <body class="doc-page">
@@ -1565,12 +1565,17 @@ Glausius Judit</p></article>
 <dialog class="viewer" id="viewer">
   <div class="viewer-bar">
     <span class="viewer-title" id="viewer-title"></span>
-    <a class="btn btn-small" id="viewer-open" href="#" target="_blank" rel="noopener">Megnyitás új lapon ↗</a>
+    <span class="viewer-count" id="viewer-count" hidden></span>
+    <a class="btn btn-small" id="viewer-open" href="#" target="_blank" rel="noopener" aria-label="Megnyitás új lapon"><span class="viewer-open-text">Megnyitás új lapon </span>↗</a>
     <button class="icon-btn" type="button" data-viewer-close aria-label="Bezárás"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
   </div>
-  <div class="viewer-body" id="viewer-body"></div>
+  <div class="viewer-stage">
+    <div class="viewer-body" id="viewer-body"></div>
+    <button class="viewer-nav viewer-prev" type="button" aria-label="Előző kép" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button class="viewer-nav viewer-next" type="button" aria-label="Következő kép" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  </div>
 </dialog>
 
-<script src="/assets/app.js?v=07ce21e3f4" defer></script>
+<script src="/assets/app.js?v=e61350c108" defer></script>
 </body>
 </html>

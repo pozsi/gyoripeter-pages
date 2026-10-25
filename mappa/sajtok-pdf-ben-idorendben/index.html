@@ -10,7 +10,7 @@
 <link rel="preload" href="/assets/fonts/inter-normal-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/assets/fonts/fonts.css">
 <link rel="stylesheet" href="/assets/schemes.css?v=1cdb095d98">
-<link rel="stylesheet" href="/assets/style.css?v=2b6e5d6f8b">
+<link rel="stylesheet" href="/assets/style.css?v=ddf09aac11">
 <script>try{var d=document.documentElement,t=localStorage.getItem("theme"),c=localStorage.getItem("scheme");if(t)d.dataset.theme=t;if(c)d.dataset.scheme=c}catch(e){}</script>
 </head>
 <body class="folder-page">
@@ -127,7 +127,7 @@
     </li>
     <li class="folder-item">
       <svg class="folder-icon icon-image" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="9.5" r="1.6"/><path d="m4 17 5-5 4 4 2.5-2.5L20 17"/></svg>
-      <a class="folder-name" href="/dokumentum/2018-05-12-magyar-idok-jpg/">2018-05-12 magyar idők..jpg</a>
+      <a class="folder-name" href="/dokumentum/2018-05-12-magyar-idok-jpg/" data-lightbox="https://files.gyoripeter.hu/17richBF7-q2vWwtPPzJFZE6NeQTF-XTa.jpg" data-lightbox-title="2018-05-12 magyar idők..jpg">2018-05-12 magyar idők..jpg</a>
       <span class="folder-type">Kép</span>
       <span class="folder-size">132 KB</span>
     </li>
@@ -582,7 +582,7 @@
       <span class="folder-size">477 KB</span>
     </li>
     <li class="folder-item">
-      <svg class="folder-icon icon-audio" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17.5V6l10-2v11.5"/><circle cx="6.8" cy="17.5" r="2.2"/><circle cx="16.8" cy="15.5" r="2.2"/></svg>
+      <span class="folder-icon-swap"><svg class="folder-icon icon-audio" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17.5V6l10-2v11.5"/><circle cx="6.8" cy="17.5" r="2.2"/><circle cx="16.8" cy="15.5" r="2.2"/></svg><svg class="folder-icon fi-play" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"/><path d="M10.3 8.7v6.6l5.2-3.3z" fill="currentColor"/></svg><svg class="folder-icon fi-pause" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"/><path d="M10 8.8v6.4M14 8.8v6.4"/></svg><svg class="folder-icon fi-bars" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="6" width="3" height="13" rx="1" fill="currentColor" stroke="none"/><rect x="10.5" y="6" width="3" height="13" rx="1" fill="currentColor" stroke="none"/><rect x="16" y="6" width="3" height="13" rx="1" fill="currentColor" stroke="none"/></svg></span>
       <a class="folder-name" href="/dokumentum/2018-06-28-klubradio-20180628-195851/" data-audio="https://files.gyoripeter.hu/12SsvYv3tJtwwpR6P9WJtcRzoID52xLid.mp3" data-audio-title="2018-06-28 klubrádió 20180628-195851">2018-06-28 klubrádió 20180628-195851</a>
       <span class="folder-type">Hangfelvétel</span>
       <span class="folder-size">6,9 MB</span>
@@ -721,7 +721,7 @@
     </li>
     <li class="folder-item">
       <svg class="folder-icon icon-image" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="9.5" r="1.6"/><path d="m4 17 5-5 4 4 2.5-2.5L20 17"/></svg>
-      <a class="folder-name" href="/dokumentum/2018-07-06-der-rebell-von-jozsefvaros-wiener-zeitung-jpg/">2018-07-06 Der Rebell von Jozsefvaros Wiener Zeitung.jpg</a>
+      <a class="folder-name" href="/dokumentum/2018-07-06-der-rebell-von-jozsefvaros-wiener-zeitung-jpg/" data-lightbox="https://files.gyoripeter.hu/1PHzfLBG29GLkxC2omPEsk60p4AOW3TkE.jpg" data-lightbox-title="2018-07-06 Der Rebell von Jozsefvaros Wiener Zeitung.jpg">2018-07-06 Der Rebell von Jozsefvaros Wiener Zeitung.jpg</a>
       <span class="folder-type">Kép</span>
       <span class="folder-size">193 KB</span>
     </li>
@@ -1148,12 +1148,17 @@
 <dialog class="viewer" id="viewer">
   <div class="viewer-bar">
     <span class="viewer-title" id="viewer-title"></span>
-    <a class="btn btn-small" id="viewer-open" href="#" target="_blank" rel="noopener">Megnyitás új lapon ↗</a>
+    <span class="viewer-count" id="viewer-count" hidden></span>
+    <a class="btn btn-small" id="viewer-open" href="#" target="_blank" rel="noopener" aria-label="Megnyitás új lapon"><span class="viewer-open-text">Megnyitás új lapon </span>↗</a>
     <button class="icon-btn" type="button" data-viewer-close aria-label="Bezárás"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
   </div>
-  <div class="viewer-body" id="viewer-body"></div>
+  <div class="viewer-stage">
+    <div class="viewer-body" id="viewer-body"></div>
+    <button class="viewer-nav viewer-prev" type="button" aria-label="Előző kép" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button class="viewer-nav viewer-next" type="button" aria-label="Következő kép" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  </div>
 </dialog>
 
-<script src="/assets/app.js?v=07ce21e3f4" defer></script>
+<script src="/assets/app.js?v=e61350c108" defer></script>
 </body>
 </html>

@@ -328,7 +328,19 @@ dialog::backdrop { background: rgb(15 12 10 / .55); backdrop-filter: blur(3px); 
 .viewer[open] { display: flex; }
 .viewer-bar { display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 18px; border-bottom: 1px solid var(--line); }
 .viewer-title { flex: 1; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.viewer-body { flex: 1; display: grid; place-items: center; background: var(--surface-2); }
+@media (max-width: 600px) { .viewer-open-text { display: none; } }   /* room for the title on phones */
+.viewer-count { flex-shrink: 0; color: var(--ink-3); font-size: 14px; font-variant-numeric: tabular-nums; }
+.viewer-stage { flex: 1; min-height: 0; display: flex; position: relative; }
+.viewer-body { flex: 1; min-width: 0; display: grid; place-items: center; background: var(--surface-2); }
+/* previous / next in an image gallery (folder images, a page's pictures) */
+.viewer-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 88%, transparent); color: var(--ink); box-shadow: var(--shadow); cursor: pointer; display: grid; place-items: center; }
+.viewer-nav[hidden] { display: none; }
+.viewer-nav svg { width: 22px; height: 22px; }
+.viewer-nav:hover { background: var(--surface); }
+.viewer-nav:disabled { opacity: .35; cursor: default; }
+.viewer-prev { left: 12px; }
+.viewer-next { right: 12px; }
 .viewer-body iframe { width: 100%; height: 100%; border: 0; }
 .viewer-body img { max-width: 100%; max-height: 100%; object-fit: contain; }
 
@@ -437,7 +449,7 @@ ul.footer-contact { list-style: none; margin: 0; padding: 0; display: grid; gap:
 .doc-original:hover span { text-decoration-thickness: 2px; }
 
 /* ---------- folder pages */
-.folder-list { list-style: none; margin: 0 auto; padding: 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.folder-list { list-style: none; margin: 0 auto; padding: 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); overflow: clip; }
 .folder-item { display: grid; grid-template-columns: 20px minmax(0, 1fr) 8.5rem 5.5rem; align-items: baseline; gap: 4px 16px; padding: 11px 16px; }
 .folder-head { padding-block: 9px; color: var(--ink-3); font-size: 12.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
 .folder-item + .folder-item { border-top: 1px solid var(--line); }
@@ -447,11 +459,39 @@ ul.footer-contact { list-style: none; margin: 0; padding: 0; display: grid; gap:
 .folder-item.is-folder .folder-name { font-weight: 600; }
 .folder-up .folder-name { grid-column: 2 / -1; color: var(--ink-2); }
 .folder-up .folder-name span { font-weight: 600; color: var(--ink); }
-.folder-name:hover { color: var(--link); text-decoration: underline; text-underline-offset: .18em; }
+.folder-name:hover { color: var(--link); }
 .folder-name .ext { color: var(--ink-3); font-size: .85em; }
 .folder-type, .folder-size { color: var(--ink-3); font-size: 13.5px; white-space: nowrap; }
 .folder-size { text-align: right; font-variant-numeric: tabular-nums; }
 .folder-head .folder-size { font-size: 12.5px; }
+/* the whole row is the link (the name's ::after covers it); playable rows swap the type icon for a play button */
+.folder-item:not(.folder-head) { position: relative; transition: background-color .12s; }
+.folder-item:not(.folder-head):hover { background: var(--surface-2); }
+.folder-name::after { content: ""; position: absolute; inset: 0; }
+.folder-item:hover .folder-name { color: var(--link); }
+/* playable rows: the row, not the name, shows the open recording / video (app.js: is-open, is-playing on the
+   row). Icon: type icon; play on hover; open + paused: play; open + playing: sound bars, pause on hover.
+   The open row is tinted with the accent, hover is grey. The state rules all weigh the same (:where), so
+   the later one wins. */
+.folder-item a.folder-name[data-audio]::before, .folder-item a.folder-name[data-yt]::before { content: none; }
+.folder-item a.folder-name.audio-current, .folder-item a.folder-name.video-current { background: none; padding: 0; border-radius: 0; }
+.folder-item.is-open { background: color-mix(in srgb, var(--accent) 20%, var(--surface)); }
+.folder-item.is-open:hover { background: color-mix(in srgb, var(--accent) 28%, var(--surface)); }
+.folder-item.is-open .folder-name { color: var(--accent-ink); }
+.folder-icon-swap { display: grid; align-self: start; }
+.folder-icon-swap > .folder-icon { grid-area: 1 / 1; visibility: hidden; color: var(--accent); }
+.folder-icon-swap > .folder-icon:first-child { visibility: visible; color: var(--ink-3); }
+.folder-item:where(:hover, :has(.folder-name:focus-visible), .is-open) .folder-icon-swap > .folder-icon:first-child { visibility: hidden; }
+.folder-item:where(:hover, :has(.folder-name:focus-visible), .is-open) .folder-icon-swap > .fi-play { visibility: visible; }
+.folder-item:where(.is-playing) .folder-icon-swap > .fi-play { visibility: hidden; }
+.folder-item:where(.is-playing) .folder-icon-swap > .fi-bars { visibility: visible; }
+.folder-item:where(.is-playing:hover, .is-playing:has(.folder-name:focus-visible)) .folder-icon-swap > .fi-bars { visibility: hidden; }
+.folder-item:where(.is-playing:hover, .is-playing:has(.folder-name:focus-visible)) .folder-icon-swap > .fi-pause { visibility: visible; }
+.fi-bars rect { transform-box: fill-box; transform-origin: 50% 100%; animation: fi-bar 1s ease-in-out infinite; }
+.fi-bars rect:nth-child(2) { animation-delay: -.4s; }
+.fi-bars rect:nth-child(3) { animation-delay: -.7s; }
+@keyframes fi-bar { 0%, 100% { transform: scaleY(.35); } 50% { transform: scaleY(1); } }
+@media (prefers-reduced-motion: reduce) { .fi-bars rect { animation: none; transform: scaleY(.7); } }
 .folder-note { margin: 12px 0 0; color: var(--ink-3); font-size: 13.5px; }
 @media (max-width: 640px) {
   .folder-item { grid-template-columns: 20px minmax(0, 1fr) auto; }
@@ -598,3 +638,41 @@ a[aria-busy] { opacity: .6; cursor: progress; }
 
 .doc-image { margin: 0; }
 .doc-image img { display: block; max-width: 100%; height: auto; margin: 0 auto; border-radius: var(--radius, 8px); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+
+/* ---------- floating video box (app.js: links with data-yt) */
+.video-box { position: fixed; right: 16px; bottom: calc(16px + var(--vb-bottom, 0px)); z-index: 72; width: 400px; max-width: calc(100vw - 32px);
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.video-box[hidden] { display: none; }
+.vb-head { display: flex; align-items: center; gap: 2px; min-height: 42px; padding: 4px 4px 4px 14px; }
+.vb-title { flex: 1; min-width: 0; font-weight: 600; font-size: 14px; color: var(--ink); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vb-title:hover { color: var(--accent-ink); text-decoration: underline; }
+.vb-btn { flex-shrink: 0; width: 34px; height: 34px; border: 0; border-radius: 50%; background: none; color: var(--ink-2); cursor: pointer; display: grid; place-items: center; }
+.vb-btn:hover { background: var(--surface-2); color: var(--ink); }
+.vb-btn svg { width: 18px; height: 18px; }
+.vb-frame { aspect-ratio: 16/9; background: #000; }
+.vb-frame iframe { display: block; width: 100%; height: 100%; border: 0; }
+.vb-restore, .vb-i-shrink, .vb-is-big .vb-i-grow { display: none; }
+.vb-is-big .vb-i-shrink { display: block; }
+/* minimized: a strip with the title; the player keeps running out of sight */
+.vb-is-min { width: 320px; }
+.vb-is-min .vb-body { height: 0; overflow: hidden; }
+.vb-is-min .vb-restore { display: grid; }
+.vb-is-min .vb-min, .vb-is-min .vb-big, .vb-is-min .vb-yt { display: none; }
+/* enlarged: the PDF viewer's width (--vb-w, set by app.js), centred above the audio bar */
+.vb-is-big { right: auto; bottom: auto; left: 50%; top: calc((100vh - var(--vb-bottom, 0px)) / 2); transform: translate(-50%, -50%); width: var(--vb-w, 880px); max-width: none; }
+@media (max-width: 640px) {
+  .video-box, .vb-is-min { left: 0; right: 0; bottom: var(--vb-bottom, 0px); width: auto; max-width: none; border-radius: 14px 14px 0 0; border-inline: 0; }
+  body:not(.has-player) .video-box { padding-bottom: env(safe-area-inset-bottom); }
+  .vb-big { display: none; }
+  body.has-video { padding-bottom: calc(56.25vw + 60px); }
+  body.has-video.has-player { padding-bottom: calc(56.25vw + 184px); }
+}
+a[data-yt].video-current { background: var(--accent-soft); border-radius: 4px; padding: 0 3px; }
+a[data-yt].video-playing::before { content: "▶\00a0"; font-size: .75em; }
+.doc-video .doc-thumb { cursor: pointer; background: #111; }
+.doc-video .doc-thumb::before { content: none; }
+.doc-video .doc-thumb img { object-position: center; }
+.doc-play { position: absolute; inset: 0; margin: auto; width: 60px; height: 42px; color: #c4302b; filter: drop-shadow(0 4px 12px rgb(0 0 0 / .4)); transition: transform .15s; }
+.doc-play svg { width: 100%; height: 100%; }
+.doc-video .doc-thumb:hover .doc-play { transform: scale(1.08); }
+.doc-video:has(.video-current) { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
